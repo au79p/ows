@@ -1,0 +1,9 @@
+{
+  "instrument_id": "gold-18k",
+  "quote_id": "q_gold_in_20261104_120000",
+  "quantity": {
+    "value": 125000,
+    "unit": "mg"
+  },
+  "description": "Au79 customer trade 01"
+}

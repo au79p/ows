@@ -1,0 +1,37 @@
+{
+  "order_id": "ord_123",
+  "client_order_id": "idem_123",
+  "status": "completed",
+  "created_at": "2026-11-04T12:00:02Z",
+  "updated_at": "2026-11-04T12:00:03Z",
+  "execution": {
+    "quantity": {
+      "value": 124997,
+      "unit": "mg"
+    },
+    "total": {
+      "value": -987654321,
+      "currency": "ktm"
+    }
+  },
+  "balance_after": {
+    "as_of": "2026-11-04T12:00:03Z",
+    "balances": [
+      {
+        "kind": "gold",
+        "instrument_id": "gold-18k",
+        "amount": {
+          "value": 274997,
+          "unit": "mg"
+        }
+      },
+      {
+        "kind": "money",
+        "amount": {
+          "value": -737654321,
+          "currency": "ktm"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "api_version": "0.1",
+  "instruments": [
+    {
+      "instrument_id": "gold-18k",
+      "name": "18K gold",
+      "quantity_units": ["mg"],
+      "price_currency": "ktm"
+    }
+  ],
+  "units": ["mg"],
+  "currencies": ["ktm"],
+  "features": {
+    "orders": true,
+    "balances": true,
+    "sse": true,
+    "order_status_webhook": true
+  },
+  "order_measurements": ["quantity", "total"],
+  "sse_support": true,
+  "webhook_support": true
+}

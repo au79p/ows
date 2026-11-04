@@ -1,0 +1,19 @@
+{
+  "sequence": 42,
+  "occurred_at": "2026-11-04T12:00:01Z",
+  "quote": {
+    "instrument_id": "gold-18k",
+    "quantity": {
+      "value": 1,
+      "unit": "mg"
+    },
+    "unit_price": {
+      "value": 789700000,
+      "currency": "ktm"
+    },
+    "quote_id": "q_gold_in_20261104_120001",
+    "issued_at": "2026-11-04T12:00:01Z",
+    "expires_at": "2026-11-04T12:00:11Z",
+    "status": "open"
+  }
+}

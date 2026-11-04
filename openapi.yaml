@@ -1,0 +1,586 @@
+openapi: 3.2.1
+info:
+  title: Au79 Open Wholesaler Specification
+  version: 0.1.0
+  description: |
+    Minimal HTTP contract for wholesaler capabilities, prices, balances, orders,
+    and optional order-status webhooks.
+  license:
+    name: CC BY 4.0
+    identifier: CC-BY-4.0
+servers:
+  - url: https://provider.invalid
+security:
+  - bearerAuth: []
+paths:
+  /v1/capabilities:
+    get:
+      operationId: getCapabilities
+      summary: Get provider capabilities
+      responses:
+        "200":
+          description: Provider capabilities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capabilities"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /v1/prices:
+    get:
+      operationId: getPrices
+      summary: Get a complete executable price snapshot
+      responses:
+        "200":
+          description: Complete price snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceSnapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/prices/stream:
+    get:
+      operationId: streamPrices
+      summary: Stream price events with Server-Sent Events
+      parameters:
+        - $ref: "#/components/parameters/LastEventId"
+      responses:
+        "200":
+          description: Server-Sent Events price stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+              example: |
+                id: 42
+                event: price.updated
+                data: {"sequence":42,"occurred_at":"2026-11-04T12:00:00Z","quote":{}}
+
+                : heartbeat
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "501":
+          $ref: "#/components/responses/ErrorResponse"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/balances:
+    get:
+      operationId: getBalances
+      summary: Get current customer balances
+      responses:
+        "200":
+          description: Current balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceSnapshot"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/orders:
+    post:
+      operationId: createOrder
+      summary: Create an order
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequest"
+      responses:
+        "201":
+          description: Order accepted, processing, or completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Quote or idempotency conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/orders/{order_id}:
+    get:
+      operationId: getOrder
+      summary: Get order status
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Order status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+  /v1/webhooks/order-status:
+    put:
+      operationId: setOrderStatusWebhook
+      summary: Create or replace the order-status webhook subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookConfig"
+      responses:
+        "204":
+          description: Subscription stored
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "501":
+          $ref: "#/components/responses/ErrorResponse"
+        default:
+          $ref: "#/components/responses/ErrorResponse"
+webhooks:
+  orderStatusChanged:
+    post:
+      operationId: receiveOrderStatusWebhook
+      summary: Order status notification sent to the configured URL
+      security: []
+      parameters:
+        - name: X-Au79-Webhook-Timestamp
+          in: header
+          required: true
+          schema:
+            type: string
+        - name: X-Au79-Webhook-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: "^sha256=[0-9a-f]+$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookEvent"
+      responses:
+        "204":
+          description: Event accepted
+        "200":
+          description: Event accepted
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    LastEventId:
+      name: Last-Event-ID
+      in: header
+      required: false
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    OrderId:
+      name: order_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    IntegerValue:
+      type: integer
+      format: int64
+      description: Exact signed 64-bit integer value.
+      examples:
+        - 125000
+    Quantity:
+      type: object
+      additionalProperties: false
+      required: [value, unit]
+      description: Signed quantity. Positive increases the account quantity; negative decreases it.
+      properties:
+        value:
+          $ref: "#/components/schemas/IntegerValue"
+        unit:
+          type: string
+          minLength: 1
+          examples: [mg]
+    Money:
+      type: object
+      additionalProperties: false
+      required: [value, currency]
+      description: Signed money amount. `ktm` means one thousand tomans, equal to 10000 IRR.
+      properties:
+        value:
+          $ref: "#/components/schemas/IntegerValue"
+        currency:
+          type: string
+          minLength: 1
+          examples: [ktm]
+    Instrument:
+      type: object
+      additionalProperties: false
+      required: [instrument_id, name, quantity_units, price_currency]
+      properties:
+        instrument_id:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        quantity_units:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+        price_currency:
+          type: string
+          minLength: 1
+    Features:
+      type: object
+      additionalProperties: false
+      required: [orders, balances, sse, order_status_webhook]
+      properties:
+        orders:
+          type: boolean
+        balances:
+          type: boolean
+        sse:
+          type: boolean
+        order_status_webhook:
+          type: boolean
+    Capabilities:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          api_version,
+          instruments,
+          units,
+          currencies,
+          features,
+          order_measurements,
+          sse_support,
+          webhook_support,
+        ]
+      properties:
+        api_version:
+          type: string
+          examples: ["0.1"]
+        instruments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Instrument"
+        units:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        currencies:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+        features:
+          $ref: "#/components/schemas/Features"
+        order_measurements:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            enum: [quantity, total]
+        sse_support:
+          type: boolean
+        webhook_support:
+          type: boolean
+    PriceQuote:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          instrument_id,
+          quantity,
+          unit_price,
+          quote_id,
+          issued_at,
+          expires_at,
+          status,
+        ]
+      properties:
+        instrument_id:
+          type: string
+          minLength: 1
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        unit_price:
+          oneOf:
+            - $ref: "#/components/schemas/Money"
+            - type: "null"
+        quote_id:
+          type: string
+          minLength: 1
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [open, expired, closed]
+    PriceSnapshot:
+      type: object
+      additionalProperties: false
+      required: [as_of, prices]
+      properties:
+        as_of:
+          type: string
+          format: date-time
+        prices:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceQuote"
+    GoldBalance:
+      type: object
+      additionalProperties: false
+      required: [kind, instrument_id, amount]
+      properties:
+        kind:
+          const: gold
+        instrument_id:
+          type: string
+          minLength: 1
+        amount:
+          $ref: "#/components/schemas/Quantity"
+        credit_limit:
+          $ref: "#/components/schemas/NonNegativeQuantity"
+        available_amount:
+          $ref: "#/components/schemas/NonNegativeQuantity"
+    MoneyBalance:
+      type: object
+      additionalProperties: false
+      required: [kind, amount]
+      properties:
+        kind:
+          const: money
+        amount:
+          $ref: "#/components/schemas/Money"
+        credit_limit:
+          $ref: "#/components/schemas/NonNegativeMoney"
+        available_amount:
+          $ref: "#/components/schemas/NonNegativeMoney"
+    Balance:
+      oneOf:
+        - $ref: "#/components/schemas/GoldBalance"
+        - $ref: "#/components/schemas/MoneyBalance"
+    BalanceSnapshot:
+      type: object
+      additionalProperties: false
+      required: [as_of, balances]
+      properties:
+        as_of:
+          type: string
+          format: date-time
+        balances:
+          type: array
+          items:
+            $ref: "#/components/schemas/Balance"
+    NonNegativeQuantity:
+      allOf:
+        - $ref: "#/components/schemas/Quantity"
+        - type: object
+          properties:
+            value:
+              minimum: 0
+      description: Non-negative quantity used for credit and availability limits.
+    NonNegativeMoney:
+      allOf:
+        - $ref: "#/components/schemas/Money"
+        - type: object
+          properties:
+            value:
+              minimum: 0
+      description: Non-negative money amount used for credit and availability limits.
+    OrderRequestBase:
+      type: object
+      required: [instrument_id, quote_id]
+      properties:
+        instrument_id:
+          type: string
+          minLength: 1
+        quote_id:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          maxLength: 1000
+    QuantityOrderRequest:
+      allOf:
+        - $ref: "#/components/schemas/OrderRequestBase"
+        - type: object
+          required: [quantity]
+          properties:
+            quantity:
+              $ref: "#/components/schemas/Quantity"
+    TotalOrderRequest:
+      allOf:
+        - $ref: "#/components/schemas/OrderRequestBase"
+        - type: object
+          required: [total]
+          properties:
+            total:
+              $ref: "#/components/schemas/Money"
+    OrderRequest:
+      oneOf:
+        - $ref: "#/components/schemas/QuantityOrderRequest"
+        - $ref: "#/components/schemas/TotalOrderRequest"
+      unevaluatedProperties: false
+    Execution:
+      type: object
+      additionalProperties: false
+      required: [quantity, total]
+      properties:
+        quantity:
+          $ref: "#/components/schemas/Quantity"
+        total:
+          $ref: "#/components/schemas/Money"
+    OrderStatus:
+      type: object
+      additionalProperties: false
+      required: [order_id, client_order_id, status, created_at, updated_at]
+      properties:
+        order_id:
+          type: string
+          minLength: 1
+        client_order_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum:
+            [
+              accepted,
+              pending,
+              processing,
+              completed,
+              partially_filled,
+              rejected,
+              cancelled,
+              expired,
+              unknown,
+            ]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        execution:
+          oneOf:
+            - $ref: "#/components/schemas/Execution"
+            - type: "null"
+        balance_after:
+          oneOf:
+            - $ref: "#/components/schemas/BalanceSnapshot"
+            - type: "null"
+    WebhookConfig:
+      type: object
+      additionalProperties: false
+      required: [url, secret]
+      properties:
+        url:
+          type: string
+          format: uri
+          pattern: "^https://"
+        secret:
+          type: string
+          minLength: 16
+    WebhookEvent:
+      type: object
+      additionalProperties: false
+      required: [event_id, event_type, occurred_at, order]
+      properties:
+        event_id:
+          type: string
+          minLength: 1
+        event_type:
+          type: string
+          const: order.status_changed
+        occurred_at:
+          type: string
+          format: date-time
+        order:
+          $ref: "#/components/schemas/OrderStatus"
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, retryable, request_id]
+      properties:
+        code:
+          type: string
+          enum:
+            [
+              invalid_request,
+              unauthorized,
+              forbidden,
+              not_found,
+              not_implemented,
+              quote_mismatch,
+              idempotency_conflict,
+              business_rule,
+              rate_limited,
+              temporarily_unavailable,
+            ]
+        message:
+          type: string
+        retryable:
+          type: boolean
+        retry_after:
+          oneOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+        request_id:
+          type: string
+          minLength: 1
+        details:
+          $ref: "#/components/schemas/ErrorDetails"
+    ErrorDetails:
+      type: object
+      additionalProperties: false
+      properties:
+        current_quote:
+          $ref: "#/components/schemas/PriceQuote"
+        current_quote_id:
+          type: string
+          minLength: 1

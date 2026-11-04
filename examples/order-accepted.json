@@ -1,0 +1,9 @@
+{
+  "order_id": "ord_123",
+  "client_order_id": "idem_123",
+  "status": "processing",
+  "created_at": "2026-11-04T12:00:02Z",
+  "updated_at": "2026-11-04T12:00:02Z",
+  "execution": null,
+  "balance_after": null
+}

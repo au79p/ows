@@ -1,0 +1,36 @@
+{
+  "as_of": "2026-11-04T12:00:00Z",
+  "balances": [
+    {
+      "kind": "gold",
+      "instrument_id": "gold-18k",
+      "amount": {
+        "value": 150000,
+        "unit": "mg"
+      },
+      "credit_limit": {
+        "value": 50000,
+        "unit": "mg"
+      },
+      "available_amount": {
+        "value": 200000,
+        "unit": "mg"
+      }
+    },
+    {
+      "kind": "money",
+      "amount": {
+        "value": 250000000,
+        "currency": "ktm"
+      },
+      "credit_limit": {
+        "value": 100000000,
+        "currency": "ktm"
+      },
+      "available_amount": {
+        "value": 350000000,
+        "currency": "ktm"
+      }
+    }
+  ]
+}

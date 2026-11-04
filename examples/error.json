@@ -1,0 +1,24 @@
+{
+  "code": "quote_mismatch",
+  "message": "The submitted quote is no longer executable.",
+  "retryable": false,
+  "retry_after": null,
+  "request_id": "req_123",
+  "details": {
+    "current_quote": {
+      "instrument_id": "gold-18k",
+      "quantity": {
+        "value": 1,
+        "unit": "mg"
+      },
+      "unit_price": {
+        "value": 791000000,
+        "currency": "ktm"
+      },
+      "quote_id": "q_gold_in_20261104_120005",
+      "issued_at": "2026-11-04T12:00:05Z",
+      "expires_at": "2026-11-04T12:00:15Z",
+      "status": "open"
+    }
+  }
+}
